@@ -73,7 +73,7 @@
 
         <!-- Header Aplikasi -->
         <header class="text-center mb-8 flex flex-col items-center">
-            <img src="img/logo_sekolah.png" alt="Logo Sekolah">
+            <img src="https://placehold.co/120x120/ffffff/334155?text=LOGO+SEKOLAH" alt="Logo Sekolah" class="h-24 w-24 mb-4 rounded-full shadow-md" onerror="this.onerror=null;this.src='https://placehold.co/120x120/ffffff/334155?text=LOGO';">
             <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-cyan-500">Media Pembelajaran PJOK</h1>
             <p class="text-lg text-gray-600 mt-1">Kelas 5 - Fase C Kurikulum Merdeka</p>
         </header>
@@ -195,21 +195,21 @@
         <footer class="mt-12">
             <div class="space-y-4">
                 <details class="bg-white p-4 rounded-lg shadow-md">
-                    <summary class="font-semibold cursor-pointer">Riwayat Hasil Kuis</summary>
+                    <summary class="font-semibold cursor-pointer">Rekap Hasil Kuis (Real-time)</summary>
                     <div class="mt-4 border-t pt-4">
                         <ul id="result-history-list" class="list-disc list-inside text-sm text-gray-600 space-y-2">
-                            <!-- Riwayat akan dimuat di sini -->
+                            <li id="history-loading">Memuat data rekap...</li>
                         </ul>
                         <div class="flex flex-wrap gap-2 mt-4">
-                             <button id="download-history-btn" class="text-xs bg-blue-100 text-blue-800 py-1 px-3 rounded-full hover:bg-blue-200">Unduh Riwayat (Excel)</button>
-                             <button id="reset-history-btn" class="text-xs bg-red-100 text-red-800 py-1 px-3 rounded-full hover:bg-red-200">Reset Riwayat (Admin)</button>
+                             <button id="download-history-btn" class="text-xs bg-blue-100 text-blue-800 py-1 px-3 rounded-full hover:bg-blue-200">Unduh Rekap (Excel)</button>
+                             <button id="reset-history-btn" class="text-xs bg-red-100 text-red-800 py-1 px-3 rounded-full hover:bg-red-200">Reset Rekap (Admin)</button>
                         </div>
                     </div>
                 </details>
                 <details class="bg-white p-4 rounded-lg shadow-md">
                     <summary class="font-semibold cursor-pointer">Biodata Pengembang</summary>
                     <div class="mt-4 border-t pt-4 text-sm text-gray-700 space-y-2 flex flex-col items-center text-center md:flex-row md:text-left md:items-start gap-4">
-                        <img src="img/foto_pengembang.png" alt="Foto Pengembang" 
+                        <img src="https://placehold.co/100x100/e2e8f0/334155?text=FOTO" alt="Foto Pengembang" class="w-24 h-24 rounded-full shadow-md object-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x100/e2e8f0/334155?text=FOTO';">
                         <div>
                             <p><strong>Nama:</strong> Riko Trisusilo, S.Pd.Gr</p>
                             <p><strong>Instansi:</strong> SD Negeri 008 Samarinda Ulu</p>
@@ -227,7 +227,7 @@
     <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
         <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center">
             <h3 class="text-lg font-bold mb-4">Konfirmasi Reset</h3>
-            <p class="text-sm text-gray-600 mb-6">Apakah Anda yakin ingin menghapus seluruh riwayat hasil kuis? Tindakan ini tidak dapat dibatalkan.</p>
+            <p class="text-sm text-gray-600 mb-6">Apakah Anda yakin ingin menghapus seluruh rekap hasil kuis? Tindakan ini tidak dapat dibatalkan.</p>
             <div class="flex justify-center gap-4">
                 <button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-400">Batal</button>
                 <button id="confirm-reset-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-red-700">Ya, Hapus</button>
@@ -240,529 +240,619 @@
         <p id="toast-message"></p>
     </div>
 
+    <script type="module">
+        // --- FIREBASE IMPORTS ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-<script>
-// --- DATA MATERI DAN KUIS ---
-const materiData = {
-    invasi: {
-        nama: "Aktivitas Permainan Invasi",
-        deskripsi: "Permainan invasi adalah permainan di mana tim mencoba menyerang area lawan untuk mencetak skor, contohnya sepak bola, bola basket, dan bola tangan.",
-        questions: [
-            { question: "Manakah yang BUKAN termasuk permainan invasi?", answers: { a: "Bulu Tangkis", b: "Sepak Bola", c: "Bola Basket", d:"Futsal" }, correct: "a" },
-            { question: "Tujuan utama dalam permainan sepak bola adalah...", answers: { a: "Memasukkan bola ke gawang lawan", b: "Melatih kekuatan kaki", c: "Bermain dengan teman", d: "Menjatuhkan lawan" }, correct: "a" },
-            { question: "Menggiring bola dalam bola basket disebut...", answers: { a: "Shooting", b: "Passing", c: "Dribbling", d: "Rebound" }, correct: "c" },
-            { question: "Teknik mengoper bola kepada teman satu tim disebut...", answers: { a: "Shooting", b: "Passing", c: "Dribbling", d: "Heading" }, correct: "b" },
-            { question: "Jumlah pemain utama dalam satu tim sepak bola adalah...", answers: { a: "5 orang", b: "6 orang", c: "11 orang", d: "12 orang" }, correct: "c" },
-            { question: "Tembakan yang dilakukan dari luar garis tiga angka dalam bola basket bernilai...", answers: { a: "1 poin", b: "2 poin", c: "3 poin", d: "4 poin" }, correct: "c" },
-            { question: "Posisi pemain yang bertugas menjaga gawang dalam sepak bola disebut...", answers: { a: "Striker", b: "Gelandang", c: "Bek", d: "Kiper" }, correct: "d" },
-            { question: "Pelanggaran karena membawa bola sambil berjalan atau berlari tanpa memantulkannya dalam basket disebut...", answers: { a: "Foul", b: "Traveling", c: "Double Dribble", d: "Goaltending" }, correct: "b" },
-            { question: "Gerakan menyundul bola dengan kepala dalam sepak bola disebut...", answers: { a: "Heading", b: "Kicking", c: "Tackling", d: "Passing" }, correct: "a" },
-            { question: "Permainan bola tangan dimainkan oleh...", answers: { a: "5 pemain per tim", b: "7 pemain per tim", c: "9 pemain per tim", d: "11 pemain per tim" }, correct: "b" }
-        ]
-    },
-    lapangan: {
-        nama: "Aktivitas Permainan Lapangan",
-        deskripsi: "Permainan lapangan adalah jenis permainan yang menggunakan lapangan dengan base atau tiang hinggap, contohnya kasti, rounders, dan softball.",
-        questions: [
-            { question: "Permainan kasti termasuk dalam jenis permainan...", answers: { a: "Invasi", b: "Net", c: "Lapangan", d: "Air" }, correct: "c" },
-            { question: "Alat pemukul dalam permainan kasti terbuat dari...", answers: { a: "Besi", b: "Plastik", c: "Kayu", d: "Aluminium" }, correct: "c" },
-            { question: "Jumlah base atau tiang hinggap dalam permainan kasti adalah...", answers: { a: "1", b: "2", c: "3", d: "4" }, correct: "c" },
-            { question: "Pemain yang bertugas melempar bola ke pemukul dalam permainan kasti disebut...", answers: { a: "Pelambung", b: "Penangkap", c: "Pemukul", d: "Penjaga base" }, correct: "a" },
-            { question: "Nilai yang didapat jika pemukul berhasil memukul bola lalu lari ke semua base dan kembali ke ruang bebas adalah...", answers: { a: "1", b: "2", c: "3", d: "4" }, correct: "b" },
-            { question: "Seorang pemain dinyatakan 'terbakar' atau mati dalam kasti jika...", answers: { a: "Bola pukulannya ditangkap", b: "Terkena lemparan bola di badan", c: "Base yang dituju sudah dibakar", d: "Semua jawaban benar" }, correct: "d" },
-            { question: "Gerakan melempar bola dalam kasti ada tiga, yaitu...", answers: { a: "Atas, bawah, samping", b: "Lurus, melengkung, zig-zag", c: "Melambung, mendatar, menyusur tanah", d: "Cepat, sedang, lambat" }, correct: "c" },
-            { question: "Permainan yang mirip dengan kasti tetapi berasal dari Inggris adalah...", answers: { a: "Baseball", b: "Softball", c: "Cricket", d: "Rounders" }, correct: "d" },
-            { question: "Tujuan utama permainan kasti adalah...", answers: { a: "Memukul bola sejauh mungkin", b: "Mengumpulkan poin sebanyak-banyaknya", c: "Menjatuhkan semua lawan", d: "Berlari secepat mungkin" }, correct: "b" },
-            { question: "Sarung tangan yang digunakan penangkap dalam permainan softball disebut...", answers: { a: "Helm", b: "Glove", c: "Masker", d: "Body protector" }, correct: "b" }
-        ]
-    },
-    pencaksilat: {
-        nama: "Aktivitas Bela Diri Pencak Silat",
-        deskripsi: "Pencak silat adalah seni bela diri tradisional Indonesia yang memperhatikan seni, olahraga, dan spiritual.",
-        questions: [
-            { question: "Sikap awal dalam pencak silat yang menunjukkan kesiapan adalah...", answers: { a: "Sikap jongkok", b: "Sikap pasang", c: "Sikap tidur", d: "Sikap lari" }, correct: "b" },
-            { question: "Gerakan menangkis serangan lawan dalam pencak silat disebut...", answers: { a: "Pukulan", b: "Tendangan", c: "Tangkisan", d: "Kuncian" }, correct: "c" },
-            { question: "Pencak silat berasal dari negara...", answers: { a: "Malaysia", b: "Thailand", c: "Indonesia", d: "Vietnam" }, correct: "c" },
-            { question: "Posisi kaki tertentu sebagai dasar tumpuan untuk melakukan sikap dan gerakan disebut...", answers: { a: "Kuda-kuda", b: "Langkah", c: "Jurus", d: "Sikap pasang" }, correct: "a" },
-            { question: "Serangan yang dilakukan dengan menggunakan tangan disebut...", answers: { a: "Tendangan", b: "Pukulan", c: "Sapuan", d: "Guntingan" }, correct: "b" },
-            { question: "Bagian tubuh yang menjadi sasaran dalam pertandingan pencak silat kategori tanding adalah...", answers: { a: "Kepala", b: "Leher", c: "Badan (dada dan perut)", d: "Kaki" }, correct: "c" },
-            { question: "Gerakan menghindari serangan lawan dengan memindahkan kaki disebut...", answers: { a: "Elakan", b: "Tangkisan", c: "Hindaran", d: "Lompatan" }, correct: "c" },
-            { question: "Induk organisasi pencak silat di Indonesia adalah...", answers: { a: "PSSI", b: "PBVSI", c: "IPSI", d: "PERSILAT" }, correct: "c" },
-            { question: "Nilai luhur yang diajarkan dalam pencak silat adalah...", answers: { a: "Kesombongan", b: "Keberanian dan kesatriaan", c: "Kekuatan tanpa batas", d: "Mencari musuh" }, correct: "b" },
-            { question: "Serangan dengan kaki untuk menjatuhkan lawan disebut...", answers: { a: "Tendangan sabit", b: "Pukulan bandul", c: "Sapuan", d: "Tangkisan luar" }, correct: "c" }
-        ]
-    },
-    senam: {
-        nama: "Aktivitas Gerak Dominan Senam",
-        deskripsi: "Senam lantai adalah kegiatan olahraga yang gerakan dan bentuk latihannya dilakukan di lantai dengan menggunakan matras.",
-        questions: [
-            { question: "Alas yang digunakan untuk melakukan senam lantai adalah...", answers: { a: "Karpet", b: "Kasur", c: "Matras", d: "Lantai keramik" }, correct: "c" },
-            { question: "Gerakan berguling ke depan di atas matras disebut...", answers: { a: "Roll belakang", b: "Roll depan", c: "Meroda", d: "Kayang" }, correct: "b" },
-            { question: "Posisi awal saat akan melakukan roll depan adalah...", answers: { a: "Berdiri tegak", b: "Jongkok", c: "Tidur telentang", d: "Semua bisa" }, correct: "b" },
-            { question: "Bagian tubuh yang pertama kali menyentuh matras saat roll depan adalah...", answers: { a: "Kepala", b: "Punggung", c: "Tengkuk", d: "Tangan" }, correct: "c" },
-            { question: "Gerakan mengangkat kedua kaki lurus ke atas dengan tumpuan pada punggung bagian atas disebut...", answers: { a: "Kayang", b: "Sikap Lilin", c: "Handstand", d: "Headstand" }, correct: "b" },
-            { question: "Manfaat melakukan senam lantai adalah...", answers: { a: "Meningkatkan kelenturan", b: "Meningkatkan kekuatan", c: "Meningkatkan keseimbangan", d: "Semua jawaban benar" }, correct: "d" },
-            { question: "Gerakan memutar tubuh ke samping dengan tumpuan pada kedua tangan dan kaki disebut...", answers: { a: "Lompat harimau", b: "Meroda", c: "Salto", d: "Roll depan" }, correct: "b" },
-            { question: "Sikap melengkungkan badan ke belakang dengan tumpuan pada kedua tangan dan kaki disebut...", answers: { a: "Sikap lilin", b: "Kayang", c: "Split", d: "Jembatan" }, correct: "b" },
-            { question: "Unsur yang paling penting dalam gerakan keseimbangan adalah...", answers: { a: "Kekuatan", b: "Kecepatan", c: "Fokus dan kontrol tubuh", d: "Kelenturan" }, correct: "c" },
-            { question: "Gerakan guling lenting diakhiri dengan sikap...", answers: { a: "Jongkok", b: "Berdiri", c: "Tidur", d: "Duduk" }, correct: "b" }
-        ]
-    },
-    berirama: {
-        nama: "Aktivitas Gerak Berirama",
-        deskripsi: "Gerak berirama atau senam irama adalah gerakan senam yang dilakukan dengan iringan musik atau hitungan.",
-        questions: [
-            { question: "Unsur utama dalam gerak berirama adalah...", answers: { a: "Kekuatan", b: "Kecepatan", c: "Keserasian gerak dan irama", d: "Lompatan tinggi" }, correct: "c" },
-            { question: "Berikut ini adalah alat yang biasa digunakan dalam senam irama, KECUALI...", answers: { a: "Simpai", b: "Raket", c: "Pita", d: "Bola" }, correct: "b" },
-            { question: "Gerakan dasar dalam gerak berirama adalah...", answers: { a: "Langkah kaki dan ayunan lengan", b: "Pukulan dan tendangan", c: "Guling dan lompatan", d: "Lempar dan tangkap" }, correct: "a" },
-            { question: "Manfaat melakukan senam irama adalah...", answers: { a: "Melatih koordinasi", b: "Menyehatkan jantung", c: "Meningkatkan keluwesan", d: "Semua jawaban benar" }, correct: "d" },
-            { question: "Tekanan yang harus diberikan dalam senam irama adalah...", answers: { a: "Kekuatan", b: "Kelenturan", c: "Kontinuitas gerakan", d: "Kecepatan maksimal" }, correct: "c" },
-            { question: "Gerakan mengayunkan lengan bisa dilakukan ke arah...", answers: { a: "Depan dan belakang", b: "Samping kanan dan kiri", c: "Atas dan bawah", d: "Semua arah" }, correct: "d" },
-            { question: "Simpai adalah alat senam irama yang berbentuk...", answers: { a: "Lingkaran", b: "Persegi", c: "Segitiga", d: "Lonjong" }, correct: "a" },
-            { question: "Irama yang digunakan dalam senam irama bisa berupa...", answers: { a: "Musik", b: "Hitungan", c: "Ketukan", d: "Semua jawaban benar" }, correct: "d" },
-            { question: "Gerakan langkah biasa dalam senam irama disebut juga langkah...", answers: { a: "Loppas", b: "Galoppas", c: "Bijtrekpas", d: "Wallpas" }, correct: "a" },
-            { question: "Sikap awal berdiri dalam senam irama adalah...", answers: { a: "Membungkuk", b: "Anjur kiri/kanan", c: "Kaki dirapatkan", d: "Kaki dibuka selebar bahu" }, correct: "b" }
-        ]
-    },
-    air: {
-        nama: "Aktivitas Permainan & Olahraga di Air",
-        deskripsi: "Aktivitas air meliputi berbagai macam kegiatan yang dilakukan di dalam air, seperti berenang, permainan air, dan menjaga keselamatan di air.",
-        questions: [
-            { question: "Sebelum masuk ke kolam renang, sebaiknya kita melakukan...", answers: { a: "Makan", b: "Pemanasan", c: "Langsung melompat", d: "Tidur" }, correct: "b" },
-            { question: "Gerakan kaki pada renang gaya bebas adalah...", answers: { a: "Naik turun bergantian", b: "Seperti katak", c: "Seperti lumba-lumba", d: "Diam saja" }, correct: "a" },
-            { question: "Gerakan mengambil napas pada renang gaya bebas dilakukan saat...", answers: { a: "Kepala di dalam air", b: "Kepala menoleh ke samping", c: "Badan telentang", d: "Kaki berhenti bergerak" }, correct: "b" },
-            { question: "Berikut ini adalah perlengkapan renang, KECUALI...", answers: { a: "Kacamata renang", b: "Baju renang", c: "Sepatu bola", d: "Pelampung" }, correct: "c" },
-            { question: "Renang gaya punggung dilakukan dengan posisi badan...", answers: { a: "Telungkup", b: "Telentang", c: "Miring", d: "Berdiri" }, correct: "b" },
-            { question: "Hal yang tidak boleh dilakukan di kolam renang adalah...", answers: { a: "Bermain air", b: "Berenang", c: "Membilas badan", d: "Mendorong teman" }, correct: "d" },
-            { question: "Renang gaya dada sering disebut juga gaya...", answers: { a: "Katak", b: "Kupu-kupu", c: "Anjing", d: "Bebas" }, correct: "a" },
-            { question: "Tujuan utama pengenalan air adalah...", answers: { a: "Agar bisa langsung menyelam", b: "Untuk adaptasi dengan suhu air", c: "Untuk pamer", d: "Agar cepat selesai" }, correct: "b" },
-            { question: "Permainan sederhana yang bisa dilakukan di air adalah...", answers: { a: "Sepak bola", b: "Polo air", c: "Kucing-kucingan di air", d: "Basket" }, correct: "c" },
-            { question: "Jika melihat orang tenggelam, hal pertama yang harus dilakukan adalah...", answers: { a: "Ikut melompat", b: "Mencari pertolongan orang dewasa", c: "Merekam kejadian", d: "Tertawa" }, correct: "b" }
-        ]
-    },
-    kebugaran: {
-        nama: "Aktivitas Kebugaran untuk Kesehatan",
-        deskripsi: "Latihan kebugaran jasmani bertujuan untuk meningkatkan daya tahan tubuh, kekuatan, kelenturan, dan komponen fisik lainnya.",
-        questions: [
-            { question: "Lari jarak jauh atau jogging bermanfaat untuk melatih...", answers: { a: "Kekuatan otot lengan", b: "Kecepatan", c: "Daya tahan jantung dan paru-paru", d: "Kelenturan pinggang" }, correct: "c" },
-            { question: "Gerakan push-up bertujuan untuk melatih kekuatan otot...", answers: { a: "Kaki dan paha", b: "Perut", c: "Lengan dan dada", d: "Punggung" }, correct: "c" },
-            { question: "Untuk melatih kelenturan, kita bisa melakukan gerakan...", answers: { a: "Angkat beban", b: "Mencium lutut", c: "Lari cepat", d: "Push-up" }, correct: "b" },
-            { question: "Kemampuan untuk mengubah arah gerak dengan cepat tanpa kehilangan keseimbangan disebut...", answers: { a: "Kecepatan", b: "Kekuatan", c: "Kelincahan", d: "Daya tahan" }, correct: "c" },
-            { question: "Latihan lari bolak-balik (shuttle run) bertujuan untuk melatih...", answers: { a: "Kelincahan", b: "Kekuatan", c: "Daya ledak", d: "Keseimbangan" }, correct: "a" },
-            { question: "Sit-up adalah bentuk latihan untuk meningkatkan kekuatan otot...", answers: { a: "Lengan", b: "Tungkai", c: "Punggung", d: "Perut" }, correct: "d" },
-            { question: "Denyut nadi normal saat istirahat adalah sekitar...", answers: { a: "20-40 kali/menit", b: "60-100 kali/menit", c: "120-150 kali/menit", d: "180-200 kali/menit" }, correct: "b" },
-            { question: "Berikut ini adalah komponen kebugaran jasmani, KECUALI...", answers: { a: "Kekuatan", b: "Kecepatan", c: "Kecerdasan", d: "Kelenturan" }, correct: "c" },
-            { question: "Lompat tali (skipping) sangat baik untuk melatih...", answers: { a: "Kekuatan tangan", b: "Daya tahan otot kaki dan jantung", c: "Kelenturan punggung", d: "Keseimbangan statis" }, correct: "b" },
-            { question: "Pendinginan setelah berolahraga bertujuan untuk...", answers: { a: "Meningkatkan suhu tubuh", b: "Mengembalikan kondisi tubuh secara bertahap", c: "Membuat otot tegang", d: "Menambah keringat" }, correct: "b" }
-        ]
-    },
-    bahaya: {
-        nama: "Mencegah Bahaya Merokok & Miras",
-        deskripsi: "Memahami bahaya merokok, minuman keras (miras), dan narkoba untuk menjaga kesehatan diri sendiri dan orang lain.",
-        questions: [
-            { question: "Zat berbahaya dalam rokok yang menyebabkan kecanduan adalah...", answers: { a: "Tar", b: "Nikotin", c: "Karbon monoksida", d: "Oksigen" }, correct: "b" },
-            { question: "Minuman keras dapat merusak organ tubuh, terutama...", answers: { a: "Hati dan otak", b: "Kulit", c: "Rambut", d: "Kuku" }, correct: "a" },
-            { question: "Sikap yang benar terhadap ajakan merokok dari teman adalah...", answers: { a: "Mencoba sedikit agar tidak dikucilkan", b: "Menolak dengan tegas dan sopan", c: "Ikut merokok agar terlihat keren", d: "Pura-pura tidak mendengar" }, correct: "b" },
-            { question: "Asap rokok yang dihirup oleh orang yang tidak merokok disebut...", answers: { a: "Perokok aktif", b: "Perokok pasif", c: "Perokok santai", d: "Perokok utama" }, correct: "b" },
-            { question: "Penyakit berbahaya yang disebabkan oleh merokok adalah...", answers: { a: "Sakit gigi", b: "Flu", c: "Kanker paru-paru dan penyakit jantung", d: "Sakit kepala" }, correct: "c" },
-            { question: "Minuman keras mengandung zat yang dapat membuat mabuk, yaitu...", answers: { a: "Alkohol", b: "Kafein", c: "Gula", d: "Soda" }, correct: "a" },
-            { question: "Mengapa remaja rentan terhadap bahaya merokok dan miras?", answers: { a: "Karena rasa ingin tahu yang tinggi", b: "Karena pengaruh teman sebaya", c: "Karena ingin dianggap dewasa", d: "Semua jawaban benar" }, correct: "d" },
-            { question: "Cara menjaga diri dari bahaya merokok dan miras adalah dengan...", answers: { a: "Memilih teman yang baik", b: "Mengisi waktu dengan kegiatan positif", c: "Berani berkata 'tidak'", d: "Semua jawaban benar" }, correct: "d" },
-            { question: "Zat dalam rokok yang membuat gigi dan paru-paru menjadi hitam adalah...", answers: { a: "Nikotin", b: "Tar", c: "Sianida", d: "Amonia" }, correct: "b" },
-            { question: "Dampak negatif dari minuman keras bagi pelajar adalah...", answers: { a: "Meningkatkan prestasi", b: "Menurunkan konsentrasi belajar", c: "Membuat lebih fokus", d: "Menambah teman" }, correct: "b" }
-        ]
-    }
-};
+        // --- FIREBASE CONFIGURATION ---
+        // Konfigurasi ini akan disediakan oleh lingkungan Canvas secara otomatis.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-// --- VARIABEL GLOBAL & SELEKTOR DOM ---
-let currentQuestions = [];
-let userAnswers = {};
-let score = 0;
-let studentName = "";
-let studentClass = "";
-let selectedMaterialKey = "";
-
-const views = {
-    welcome: document.getElementById('welcome-view'),
-    quiz: document.getElementById('quiz-view'),
-    results: document.getElementById('results-view'),
-    certificate: document.getElementById('certificate-view')
-};
-
-const studentNameInput = document.getElementById('studentName');
-const studentClassSelect = document.getElementById('studentClass');
-const materialSelect = document.getElementById('material');
-const startQuizBtn = document.getElementById('start-quiz-btn');
-const materialDescription = document.getElementById('material-description');
-const quizContainer = document.getElementById('quiz-container');
-const quizTitle = document.getElementById('quiz-title');
-const submitQuizBtn = document.getElementById('submit-quiz-btn');
-const scoreText = document.getElementById('score-text');
-const feedbackText = document.getElementById('feedback-text');
-const feedbackIcon = document.getElementById('feedback-icon');
-const studentNameResult = document.getElementById('student-name-result');
-const retryQuizBtn = document.getElementById('retry-quiz-btn');
-const downloadResultsBtn = document.getElementById('download-results-btn');
-const viewCertificateBtn = document.getElementById('view-certificate-btn');
-const certificateName = document.getElementById('certificate-name');
-const certificateMaterial = document.getElementById('certificate-material');
-const certificateScore = document.getElementById('certificate-score');
-const certificateDate = document.getElementById('certificate-date');
-const backToResultsBtn = document.getElementById('back-to-results-btn');
-const downloadCertificatePdfBtn = document.getElementById('download-certificate-pdf-btn');
-const resultHistoryList = document.getElementById('result-history-list');
-const downloadHistoryBtn = document.getElementById('download-history-btn');
-const resetHistoryBtn = document.getElementById('reset-history-btn');
-const confirmModal = document.getElementById('confirm-modal');
-const cancelResetBtn = document.getElementById('cancel-reset-btn');
-const confirmResetBtn = document.getElementById('confirm-reset-btn');
-const toastNotification = document.getElementById('toast-notification');
-const toastMessage = document.getElementById('toast-message');
-
-
-// --- FUNGSI UTAMA APLIKASI ---
-
-/**
- * Menampilkan view yang dipilih dan menyembunyikan yang lain.
- * @param {string} viewName - Nama view yang akan ditampilkan ('welcome', 'quiz', 'results', 'certificate').
- */
-function showView(viewName) {
-    Object.values(views).forEach(view => view.style.display = 'none');
-    if (views[viewName]) {
-        views[viewName].style.display = 'block';
-    }
-}
-
-/**
- * Menampilkan notifikasi toast.
- * @param {string} message - Pesan yang akan ditampilkan.
- */
-function showToast(message) {
-    toastMessage.textContent = message;
-    toastNotification.classList.remove('opacity-0', 'translate-y-20');
-    toastNotification.classList.add('opacity-100', 'translate-y-0');
-    
-    setTimeout(() => {
-        toastNotification.classList.remove('opacity-100', 'translate-y-0');
-        toastNotification.classList.add('opacity-0', 'translate-y-20');
-    }, 3000); // Sembunyikan setelah 3 detik
-}
-
-/**
- * Memvalidasi input dan mengaktifkan/menonaktifkan tombol mulai.
- */
-function validateWelcomeForm() {
-    const isNameFilled = studentNameInput.value.trim() !== '';
-    const isClassSelected = studentClassSelect.value !== '';
-    const isMaterialSelected = materialSelect.value !== '';
-    startQuizBtn.disabled = !(isNameFilled && isClassSelected && isMaterialSelected);
-    
-    const icon = startQuizBtn.querySelector('svg');
-    if (icon) {
-        if (startQuizBtn.disabled) {
-            icon.classList.remove('animate-bounce-right');
-        } else {
-            icon.classList.add('animate-bounce-right');
+        // --- FIREBASE INITIALIZATION ---
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (e) {
+            console.error("Gagal menginisialisasi Firebase:", e);
+            document.getElementById('history-loading').textContent = "Gagal terhubung ke database.";
         }
-    }
-}
+        
+        // --- COLLECTION REFERENCE ---
+        const resultsCollectionPath = `artifacts/${appId}/public/data/quiz_results`;
+        let resultsCollectionRef;
+        
+        // --- DATA MATERI DAN KUIS ---
+        const materiData = {
+            invasi: {
+                nama: "Aktivitas Permainan Invasi",
+                deskripsi: "Permainan invasi adalah permainan di mana tim mencoba menyerang area lawan untuk mencetak skor, contohnya sepak bola, bola basket, dan bola tangan.",
+                questions: [
+                    { question: "Manakah yang BUKAN termasuk permainan invasi?", answers: { a: "Bulu Tangkis", b: "Sepak Bola", c: "Bola Basket", d:"Futsal" }, correct: "a" },
+                    { question: "Tujuan utama dalam permainan sepak bola adalah...", answers: { a: "Memasukkan bola ke gawang lawan", b: "Melatih kekuatan kaki", c: "Bermain dengan teman", d: "Menjatuhkan lawan" }, correct: "a" },
+                    { question: "Menggiring bola dalam bola basket disebut...", answers: { a: "Shooting", b: "Passing", c: "Dribbling", d: "Rebound" }, correct: "c" },
+                    { question: "Teknik mengoper bola kepada teman satu tim disebut...", answers: { a: "Shooting", b: "Passing", c: "Dribbling", d: "Heading" }, correct: "b" },
+                    { question: "Jumlah pemain utama dalam satu tim sepak bola adalah...", answers: { a: "5 orang", b: "6 orang", c: "11 orang", d: "12 orang" }, correct: "c" },
+                    { question: "Tembakan yang dilakukan dari luar garis tiga angka dalam bola basket bernilai...", answers: { a: "1 poin", b: "2 poin", c: "3 poin", d: "4 poin" }, correct: "c" },
+                    { question: "Posisi pemain yang bertugas menjaga gawang dalam sepak bola disebut...", answers: { a: "Striker", b: "Gelandang", c: "Bek", d: "Kiper" }, correct: "d" },
+                    { question: "Pelanggaran karena membawa bola sambil berjalan atau berlari tanpa memantulkannya dalam basket disebut...", answers: { a: "Foul", b: "Traveling", c: "Double Dribble", d: "Goaltending" }, correct: "b" },
+                    { question: "Gerakan menyundul bola dengan kepala dalam sepak bola disebut...", answers: { a: "Heading", b: "Kicking", c: "Tackling", d: "Passing" }, correct: "a" },
+                    { question: "Permainan bola tangan dimainkan oleh...", answers: { a: "5 pemain per tim", b: "7 pemain per tim", c: "9 pemain per tim", d: "11 pemain per tim" }, correct: "b" }
+                ]
+            },
+            lapangan: {
+                nama: "Aktivitas Permainan Lapangan",
+                deskripsi: "Permainan lapangan adalah jenis permainan yang menggunakan lapangan dengan base atau tiang hinggap, contohnya kasti, rounders, dan softball.",
+                questions: [
+                    { question: "Permainan kasti termasuk dalam jenis permainan...", answers: { a: "Invasi", b: "Net", c: "Lapangan", d: "Air" }, correct: "c" },
+                    { question: "Alat pemukul dalam permainan kasti terbuat dari...", answers: { a: "Besi", b: "Plastik", c: "Kayu", d: "Aluminium" }, correct: "c" },
+                    { question: "Jumlah base atau tiang hinggap dalam permainan kasti adalah...", answers: { a: "1", b: "2", c: "3", d: "4" }, correct: "c" },
+                    { question: "Pemain yang bertugas melempar bola ke pemukul dalam permainan kasti disebut...", answers: { a: "Pelambung", b: "Penangkap", c: "Pemukul", d: "Penjaga base" }, correct: "a" },
+                    { question: "Nilai yang didapat jika pemukul berhasil memukul bola lalu lari ke semua base dan kembali ke ruang bebas adalah...", answers: { a: "1", b: "2", c: "3", d: "4" }, correct: "b" },
+                    { question: "Seorang pemain dinyatakan 'terbakar' atau mati dalam kasti jika...", answers: { a: "Bola pukulannya ditangkap", b: "Terkena lemparan bola di badan", c: "Base yang dituju sudah dibakar", d: "Semua jawaban benar" }, correct: "d" },
+                    { question: "Gerakan melempar bola dalam kasti ada tiga, yaitu...", answers: { a: "Atas, bawah, samping", b: "Lurus, melengkung, zig-zag", c: "Melambung, mendatar, menyusur tanah", d: "Cepat, sedang, lambat" }, correct: "c" },
+                    { question: "Permainan yang mirip dengan kasti tetapi berasal dari Inggris adalah...", answers: { a: "Baseball", b: "Softball", c: "Cricket", d: "Rounders" }, correct: "d" },
+                    { question: "Tujuan utama permainan kasti adalah...", answers: { a: "Memukul bola sejauh mungkin", b: "Mengumpulkan poin sebanyak-banyaknya", c: "Menjatuhkan semua lawan", d: "Berlari secepat mungkin" }, correct: "b" },
+                    { question: "Sarung tangan yang digunakan penangkap dalam permainan softball disebut...", answers: { a: "Helm", b: "Glove", c: "Masker", d: "Body protector" }, correct: "b" }
+                ]
+            },
+            pencaksilat: {
+                nama: "Aktivitas Bela Diri Pencak Silat",
+                deskripsi: "Pencak silat adalah seni bela diri tradisional Indonesia yang memperhatikan seni, olahraga, dan spiritual.",
+                questions: [
+                    { question: "Sikap awal dalam pencak silat yang menunjukkan kesiapan adalah...", answers: { a: "Sikap jongkok", b: "Sikap pasang", c: "Sikap tidur", d: "Sikap lari" }, correct: "b" },
+                    { question: "Gerakan menangkis serangan lawan dalam pencak silat disebut...", answers: { a: "Pukulan", b: "Tendangan", c: "Tangkisan", d: "Kuncian" }, correct: "c" },
+                    { question: "Pencak silat berasal dari negara...", answers: { a: "Malaysia", b: "Thailand", c: "Indonesia", d: "Vietnam" }, correct: "c" },
+                    { question: "Posisi kaki tertentu sebagai dasar tumpuan untuk melakukan sikap dan gerakan disebut...", answers: { a: "Kuda-kuda", b: "Langkah", c: "Jurus", d: "Sikap pasang" }, correct: "a" },
+                    { question: "Serangan yang dilakukan dengan menggunakan tangan disebut...", answers: { a: "Tendangan", b: "Pukulan", c: "Sapuan", d: "Guntingan" }, correct: "b" },
+                    { question: "Bagian tubuh yang menjadi sasaran dalam pertandingan pencak silat kategori tanding adalah...", answers: { a: "Kepala", b: "Leher", c: "Badan (dada dan perut)", d: "Kaki" }, correct: "c" },
+                    { question: "Gerakan menghindari serangan lawan dengan memindahkan kaki disebut...", answers: { a: "Elakan", b: "Tangkisan", c: "Hindaran", d: "Lompatan" }, correct: "c" },
+                    { question: "Induk organisasi pencak silat di Indonesia adalah...", answers: { a: "PSSI", b: "PBVSI", c: "IPSI", d: "PERSILAT" }, correct: "c" },
+                    { question: "Nilai luhur yang diajarkan dalam pencak silat adalah...", answers: { a: "Kesombongan", b: "Keberanian dan kesatriaan", c: "Kekuatan tanpa batas", d: "Mencari musuh" }, correct: "b" },
+                    { question: "Serangan dengan kaki untuk menjatuhkan lawan disebut...", answers: { a: "Tendangan sabit", b: "Pukulan bandul", c: "Sapuan", d: "Tangkisan luar" }, correct: "c" }
+                ]
+            },
+            senam: {
+                nama: "Aktivitas Gerak Dominan Senam",
+                deskripsi: "Senam lantai adalah kegiatan olahraga yang gerakan dan bentuk latihannya dilakukan di lantai dengan menggunakan matras.",
+                questions: [
+                    { question: "Alas yang digunakan untuk melakukan senam lantai adalah...", answers: { a: "Karpet", b: "Kasur", c: "Matras", d: "Lantai keramik" }, correct: "c" },
+                    { question: "Gerakan berguling ke depan di atas matras disebut...", answers: { a: "Roll belakang", b: "Roll depan", c: "Meroda", d: "Kayang" }, correct: "b" },
+                    { question: "Posisi awal saat akan melakukan roll depan adalah...", answers: { a: "Berdiri tegak", b: "Jongkok", c: "Tidur telentang", d: "Semua bisa" }, correct: "b" },
+                    { question: "Bagian tubuh yang pertama kali menyentuh matras saat roll depan adalah...", answers: { a: "Kepala", b: "Punggung", c: "Tengkuk", d: "Tangan" }, correct: "c" },
+                    { question: "Gerakan mengangkat kedua kaki lurus ke atas dengan tumpuan pada punggung bagian atas disebut...", answers: { a: "Kayang", b: "Sikap Lilin", c: "Handstand", d: "Headstand" }, correct: "b" },
+                    { question: "Manfaat melakukan senam lantai adalah...", answers: { a: "Meningkatkan kelenturan", b: "Meningkatkan kekuatan", c: "Meningkatkan keseimbangan", d: "Semua jawaban benar" }, correct: "d" },
+                    { question: "Gerakan memutar tubuh ke samping dengan tumpuan pada kedua tangan dan kaki disebut...", answers: { a: "Lompat harimau", b: "Meroda", c: "Salto", d: "Roll depan" }, correct: "b" },
+                    { question: "Sikap melengkungkan badan ke belakang dengan tumpuan pada kedua tangan dan kaki disebut...", answers: { a: "Sikap lilin", b: "Kayang", c: "Split", d: "Jembatan" }, correct: "b" },
+                    { question: "Unsur yang paling penting dalam gerakan keseimbangan adalah...", answers: { a: "Kekuatan", b: "Kecepatan", c: "Fokus dan kontrol tubuh", d: "Kelenturan" }, correct: "c" },
+                    { question: "Gerakan guling lenting diakhiri dengan sikap...", answers: { a: "Jongkok", b: "Berdiri", c: "Tidur", d: "Duduk" }, correct: "b" }
+                ]
+            },
+            berirama: {
+                nama: "Aktivitas Gerak Berirama",
+                deskripsi: "Gerak berirama atau senam irama adalah gerakan senam yang dilakukan dengan iringan musik atau hitungan.",
+                questions: [
+                    { question: "Unsur utama dalam gerak berirama adalah...", answers: { a: "Kekuatan", b: "Kecepatan", c: "Keserasian gerak dan irama", d: "Lompatan tinggi" }, correct: "c" },
+                    { question: "Berikut ini adalah alat yang biasa digunakan dalam senam irama, KECUALI...", answers: { a: "Simpai", b: "Raket", c: "Pita", d: "Bola" }, correct: "b" },
+                    { question: "Gerakan dasar dalam gerak berirama adalah...", answers: { a: "Langkah kaki dan ayunan lengan", b: "Pukulan dan tendangan", c: "Guling dan lompatan", d: "Lempar dan tangkap" }, correct: "a" },
+                    { question: "Manfaat melakukan senam irama adalah...", answers: { a: "Melatih koordinasi", b: "Menyehatkan jantung", c: "Meningkatkan keluwesan", d: "Semua jawaban benar" }, correct: "d" },
+                    { question: "Tekanan yang harus diberikan dalam senam irama adalah...", answers: { a: "Kekuatan", b: "Kelenturan", c: "Kontinuitas gerakan", d: "Kecepatan maksimal" }, correct: "c" },
+                    { question: "Gerakan mengayunkan lengan bisa dilakukan ke arah...", answers: { a: "Depan dan belakang", b: "Samping kanan dan kiri", c: "Atas dan bawah", d: "Semua arah" }, correct: "d" },
+                    { question: "Simpai adalah alat senam irama yang berbentuk...", answers: { a: "Lingkaran", b: "Persegi", c: "Segitiga", d: "Lonjong" }, correct: "a" },
+                    { question: "Irama yang digunakan dalam senam irama bisa berupa...", answers: { a: "Musik", b: "Hitungan", c: "Ketukan", d: "Semua jawaban benar" }, correct: "d" },
+                    { question: "Gerakan langkah biasa dalam senam irama disebut juga langkah...", answers: { a: "Loppas", b: "Galoppas", c: "Bijtrekpas", d: "Wallpas" }, correct: "a" },
+                    { question: "Sikap awal berdiri dalam senam irama adalah...", answers: { a: "Membungkuk", b: "Anjur kiri/kanan", c: "Kaki dirapatkan", d: "Kaki dibuka selebar bahu" }, correct: "b" }
+                ]
+            },
+            air: {
+                nama: "Aktivitas Permainan & Olahraga di Air",
+                deskripsi: "Aktivitas air meliputi berbagai macam kegiatan yang dilakukan di dalam air, seperti berenang, permainan air, dan menjaga keselamatan di air.",
+                questions: [
+                    { question: "Sebelum masuk ke kolam renang, sebaiknya kita melakukan...", answers: { a: "Makan", b: "Pemanasan", c: "Langsung melompat", d: "Tidur" }, correct: "b" },
+                    { question: "Gerakan kaki pada renang gaya bebas adalah...", answers: { a: "Naik turun bergantian", b: "Seperti katak", c: "Seperti lumba-lumba", d: "Diam saja" }, correct: "a" },
+                    { question: "Gerakan mengambil napas pada renang gaya bebas dilakukan saat...", answers: { a: "Kepala di dalam air", b: "Kepala menoleh ke samping", c: "Badan telentang", d: "Kaki berhenti bergerak" }, correct: "b" },
+                    { question: "Berikut ini adalah perlengkapan renang, KECUALI...", answers: { a: "Kacamata renang", b: "Baju renang", c: "Sepatu bola", d: "Pelampung" }, correct: "c" },
+                    { question: "Renang gaya punggung dilakukan dengan posisi badan...", answers: { a: "Telungkup", b: "Telentang", c: "Miring", d: "Berdiri" }, correct: "b" },
+                    { question: "Hal yang tidak boleh dilakukan di kolam renang adalah...", answers: { a: "Bermain air", b: "Berenang", c: "Membilas badan", d: "Mendorong teman" }, correct: "d" },
+                    { question: "Renang gaya dada sering disebut juga gaya...", answers: { a: "Katak", b: "Kupu-kupu", c: "Anjing", d: "Bebas" }, correct: "a" },
+                    { question: "Tujuan utama pengenalan air adalah...", answers: { a: "Agar bisa langsung menyelam", b: "Untuk adaptasi dengan suhu air", c: "Untuk pamer", d: "Agar cepat selesai" }, correct: "b" },
+                    { question: "Permainan sederhana yang bisa dilakukan di air adalah...", answers: { a: "Sepak bola", b: "Polo air", c: "Kucing-kucingan di air", d: "Basket" }, correct: "c" },
+                    { question: "Jika melihat orang tenggelam, hal pertama yang harus dilakukan adalah...", answers: { a: "Ikut melompat", b: "Mencari pertolongan orang dewasa", c: "Merekam kejadian", d: "Tertawa" }, correct: "b" }
+                ]
+            },
+            kebugaran: {
+                nama: "Aktivitas Kebugaran untuk Kesehatan",
+                deskripsi: "Latihan kebugaran jasmani bertujuan untuk meningkatkan daya tahan tubuh, kekuatan, kelenturan, dan komponen fisik lainnya.",
+                questions: [
+                    { question: "Lari jarak jauh atau jogging bermanfaat untuk melatih...", answers: { a: "Kekuatan otot lengan", b: "Kecepatan", c: "Daya tahan jantung dan paru-paru", d: "Kelenturan pinggang" }, correct: "c" },
+                    { question: "Gerakan push-up bertujuan untuk melatih kekuatan otot...", answers: { a: "Kaki dan paha", b: "Perut", c: "Lengan dan dada", d: "Punggung" }, correct: "c" },
+                    { question: "Untuk melatih kelenturan, kita bisa melakukan gerakan...", answers: { a: "Angkat beban", b: "Mencium lutut", c: "Lari cepat", d: "Push-up" }, correct: "b" },
+                    { question: "Kemampuan untuk mengubah arah gerak dengan cepat tanpa kehilangan keseimbangan disebut...", answers: { a: "Kecepatan", b: "Kekuatan", c: "Kelincahan", d: "Daya tahan" }, correct: "c" },
+                    { question: "Latihan lari bolak-balik (shuttle run) bertujuan untuk melatih...", answers: { a: "Kelincahan", b: "Kekuatan", c: "Daya ledak", d: "Keseimbangan" }, correct: "a" },
+                    { question: "Sit-up adalah bentuk latihan untuk meningkatkan kekuatan otot...", answers: { a: "Lengan", b: "Tungkai", c: "Punggung", d: "Perut" }, correct: "d" },
+                    { question: "Denyut nadi normal saat istirahat adalah sekitar...", answers: { a: "20-40 kali/menit", b: "60-100 kali/menit", c: "120-150 kali/menit", d: "180-200 kali/menit" }, correct: "b" },
+                    { question: "Berikut ini adalah komponen kebugaran jasmani, KECUALI...", answers: { a: "Kekuatan", b: "Kecepatan", c: "Kecerdasan", d: "Kelenturan" }, correct: "c" },
+                    { question: "Lompat tali (skipping) sangat baik untuk melatih...", answers: { a: "Kekuatan tangan", b: "Daya tahan otot kaki dan jantung", c: "Kelenturan punggung", d: "Keseimbangan statis" }, correct: "b" },
+                    { question: "Pendinginan setelah berolahraga bertujuan untuk...", answers: { a: "Meningkatkan suhu tubuh", b: "Mengembalikan kondisi tubuh secara bertahap", c: "Membuat otot tegang", d: "Menambah keringat" }, correct: "b" }
+                ]
+            },
+            bahaya: {
+                nama: "Mencegah Bahaya Merokok & Miras",
+                deskripsi: "Memahami bahaya merokok, minuman keras (miras), dan narkoba untuk menjaga kesehatan diri sendiri dan orang lain.",
+                questions: [
+                    { question: "Zat berbahaya dalam rokok yang menyebabkan kecanduan adalah...", answers: { a: "Tar", b: "Nikotin", c: "Karbon monoksida", d: "Oksigen" }, correct: "b" },
+                    { question: "Minuman keras dapat merusak organ tubuh, terutama...", answers: { a: "Hati dan otak", b: "Kulit", c: "Rambut", d: "Kuku" }, correct: "a" },
+                    { question: "Sikap yang benar terhadap ajakan merokok dari teman adalah...", answers: { a: "Mencoba sedikit agar tidak dikucilkan", b: "Menolak dengan tegas dan sopan", c: "Ikut merokok agar terlihat keren", d: "Pura-pura tidak mendengar" }, correct: "b" },
+                    { question: "Asap rokok yang dihirup oleh orang yang tidak merokok disebut...", answers: { a: "Perokok aktif", b: "Perokok pasif", c: "Perokok santai", d: "Perokok utama" }, correct: "b" },
+                    { question: "Penyakit berbahaya yang disebabkan oleh merokok adalah...", answers: { a: "Sakit gigi", b: "Flu", c: "Kanker paru-paru dan penyakit jantung", d: "Sakit kepala" }, correct: "c" },
+                    { question: "Minuman keras mengandung zat yang dapat membuat mabuk, yaitu...", answers: { a: "Alkohol", b: "Kafein", c: "Gula", d: "Soda" }, correct: "a" },
+                    { question: "Mengapa remaja rentan terhadap bahaya merokok dan miras?", answers: { a: "Karena rasa ingin tahu yang tinggi", b: "Karena pengaruh teman sebaya", c: "Karena ingin dianggap dewasa", d: "Semua jawaban benar" }, correct: "d" },
+                    { question: "Cara menjaga diri dari bahaya merokok dan miras adalah dengan...", answers: { a: "Memilih teman yang baik", b: "Mengisi waktu dengan kegiatan positif", c: "Berani berkata 'tidak'", d: "Semua jawaban benar" }, correct: "d" },
+                    { question: "Zat dalam rokok yang membuat gigi dan paru-paru menjadi hitam adalah...", answers: { a: "Nikotin", b: "Tar", c: "Sianida", d: "Amonia" }, correct: "b" },
+                    { question: "Dampak negatif dari minuman keras bagi pelajar adalah...", answers: { a: "Meningkatkan prestasi", b: "Menurunkan konsentrasi belajar", c: "Membuat lebih fokus", d: "Menambah teman" }, correct: "b" }
+                ]
+            }
+        };
 
-/**
- * Menampilkan deskripsi materi yang dipilih.
- */
-function displayMaterialDescription() {
-    const selectedValue = materialSelect.value;
-    if (selectedValue && materiData[selectedValue]) {
-        materialDescription.textContent = materiData[selectedValue].deskripsi;
-        materialDescription.style.display = 'block';
-    } else {
-        materialDescription.style.display = 'none';
-    }
-    validateWelcomeForm();
-}
+        // --- VARIABEL GLOBAL & SELEKTOR DOM ---
+        let currentQuestions = [];
+        let userAnswers = {};
+        let score = 0;
+        let studentName = "";
+        let studentClass = "";
+        let selectedMaterialKey = "";
 
-/**
- * Memulai kuis: menyimpan data, memuat pertanyaan, dan menampilkan view kuis.
- */
-function startQuiz() {
-    studentName = studentNameInput.value.trim();
-    studentClass = studentClassSelect.value;
-    selectedMaterialKey = materialSelect.value;
+        const views = {
+            welcome: document.getElementById('welcome-view'),
+            quiz: document.getElementById('quiz-view'),
+            results: document.getElementById('results-view'),
+            certificate: document.getElementById('certificate-view')
+        };
 
-    if (!studentName || !studentClass || !selectedMaterialKey) {
-        alert("Harap isi nama, kelas, dan pilih materi terlebih dahulu.");
-        return;
-    }
+        const studentNameInput = document.getElementById('studentName');
+        const studentClassSelect = document.getElementById('studentClass');
+        const materialSelect = document.getElementById('material');
+        const startQuizBtn = document.getElementById('start-quiz-btn');
+        const materialDescription = document.getElementById('material-description');
+        const quizContainer = document.getElementById('quiz-container');
+        const quizTitle = document.getElementById('quiz-title');
+        const submitQuizBtn = document.getElementById('submit-quiz-btn');
+        const scoreText = document.getElementById('score-text');
+        const feedbackText = document.getElementById('feedback-text');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const studentNameResult = document.getElementById('student-name-result');
+        const retryQuizBtn = document.getElementById('retry-quiz-btn');
+        const downloadResultsBtn = document.getElementById('download-results-btn');
+        const viewCertificateBtn = document.getElementById('view-certificate-btn');
+        const certificateName = document.getElementById('certificate-name');
+        const certificateMaterial = document.getElementById('certificate-material');
+        const certificateScore = document.getElementById('certificate-score');
+        const certificateDate = document.getElementById('certificate-date');
+        const backToResultsBtn = document.getElementById('back-to-results-btn');
+        const downloadCertificatePdfBtn = document.getElementById('download-certificate-pdf-btn');
+        const resultHistoryList = document.getElementById('result-history-list');
+        const downloadHistoryBtn = document.getElementById('download-history-btn');
+        const resetHistoryBtn = document.getElementById('reset-history-btn');
+        const confirmModal = document.getElementById('confirm-modal');
+        const cancelResetBtn = document.getElementById('cancel-reset-btn');
+        const confirmResetBtn = document.getElementById('confirm-reset-btn');
+        const toastNotification = document.getElementById('toast-notification');
+        const toastMessage = document.getElementById('toast-message');
 
-    const material = materiData[selectedMaterialKey];
-    currentQuestions = material.questions;
-    quizTitle.textContent = material.nama;
-    quizContainer.innerHTML = ''; // Kosongkan kontainer kuis
-    userAnswers = {};
 
-    currentQuestions.forEach((q, index) => {
-        const questionId = `q${index}`;
-        const answersHtml = Object.entries(q.answers).map(([key, text]) => `
-            <label for="${questionId}${key}" class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 transition-all">
-                <input type="radio" id="${questionId}${key}" name="${questionId}" value="${key}" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
-                <span class="ml-3 text-gray-700">${key.toUpperCase()}. ${text}</span>
-            </label>
-        `).join('');
+        // --- FUNGSI UTAMA APLIKASI ---
 
-        quizContainer.innerHTML += `
-            <div class="question-block border-t pt-4 first:border-t-0 first:pt-0">
-                <p class="font-semibold mb-3">${index + 1}. ${q.question}</p>
-                <div class="space-y-2">${answersHtml}</div>
-            </div>
-        `;
-    });
-    
-    // Menambahkan event listener untuk setiap radio button
-    currentQuestions.forEach((q, index) => {
-        const questionId = `q${index}`;
-        document.querySelectorAll(`input[name="${questionId}"]`).forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                userAnswers[index] = e.target.value;
+        /**
+         * Menampilkan view yang dipilih dan menyembunyikan yang lain.
+         */
+        function showView(viewName) {
+            Object.values(views).forEach(view => view.style.display = 'none');
+            if (views[viewName]) {
+                views[viewName].style.display = 'block';
+            }
+        }
+
+        /**
+         * Menampilkan notifikasi toast.
+         */
+        function showToast(message) {
+            toastMessage.textContent = message;
+            toastNotification.classList.remove('opacity-0', 'translate-y-20');
+            toastNotification.classList.add('opacity-100', 'translate-y-0');
+            
+            setTimeout(() => {
+                toastNotification.classList.remove('opacity-100', 'translate-y-0');
+                toastNotification.classList.add('opacity-0', 'translate-y-20');
+            }, 3000);
+        }
+
+        /**
+         * Memvalidasi input dan mengaktifkan/menonaktifkan tombol mulai.
+         */
+        function validateWelcomeForm() {
+            const isNameFilled = studentNameInput.value.trim() !== '';
+            const isClassSelected = studentClassSelect.value !== '';
+            const isMaterialSelected = materialSelect.value !== '';
+            startQuizBtn.disabled = !(isNameFilled && isClassSelected && isMaterialSelected);
+            
+            const icon = startQuizBtn.querySelector('svg');
+            if (icon) {
+                if (startQuizBtn.disabled) {
+                    icon.classList.remove('animate-bounce-right');
+                } else {
+                    icon.classList.add('animate-bounce-right');
+                }
+            }
+        }
+
+        /**
+         * Menampilkan deskripsi materi yang dipilih.
+         */
+        function displayMaterialDescription() {
+            const selectedValue = materialSelect.value;
+            if (selectedValue && materiData[selectedValue]) {
+                materialDescription.textContent = materiData[selectedValue].deskripsi;
+                materialDescription.style.display = 'block';
+            } else {
+                materialDescription.style.display = 'none';
+            }
+            validateWelcomeForm();
+        }
+
+        /**
+         * Memulai kuis.
+         */
+        function startQuiz() {
+            studentName = studentNameInput.value.trim();
+            studentClass = studentClassSelect.value;
+            selectedMaterialKey = materialSelect.value;
+
+            if (!studentName || !studentClass || !selectedMaterialKey) {
+                alert("Harap isi nama, kelas, dan pilih materi terlebih dahulu.");
+                return;
+            }
+
+            const material = materiData[selectedMaterialKey];
+            currentQuestions = material.questions;
+            quizTitle.textContent = material.nama;
+            quizContainer.innerHTML = '';
+            userAnswers = {};
+
+            currentQuestions.forEach((q, index) => {
+                const questionId = `q${index}`;
+                const answersHtml = Object.entries(q.answers).map(([key, text]) => `
+                    <label for="${questionId}${key}" class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 transition-all">
+                        <input type="radio" id="${questionId}${key}" name="${questionId}" value="${key}" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                        <span class="ml-3 text-gray-700">${key.toUpperCase()}. ${text}</span>
+                    </label>
+                `).join('');
+
+                quizContainer.innerHTML += `
+                    <div class="question-block border-t pt-4 first:border-t-0 first:pt-0">
+                        <p class="font-semibold mb-3">${index + 1}. ${q.question}</p>
+                        <div class="space-y-2">${answersHtml}</div>
+                    </div>
+                `;
             });
-        });
-    });
+            
+            currentQuestions.forEach((q, index) => {
+                const questionId = `q${index}`;
+                document.querySelectorAll(`input[name="${questionId}"]`).forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        userAnswers[index] = e.target.value;
+                    });
+                });
+            });
 
-    showView('quiz');
-}
-
-/**
- * Mengirimkan kuis, menghitung skor, menyimpan hasil, dan menampilkan hasil.
- */
-function submitQuiz() {
-    if (Object.keys(userAnswers).length !== currentQuestions.length) {
-        alert('Harap jawab semua pertanyaan sebelum menyelesaikan kuis.');
-        return;
-    }
-
-    let correctAnswers = 0;
-    currentQuestions.forEach((q, index) => {
-        if (userAnswers[index] === q.correct) {
-            correctAnswers++;
+            showView('quiz');
         }
-    });
 
-    score = Math.round((correctAnswers / currentQuestions.length) * 100);
-    
-    saveResult(); // Simpan hasil kuis ke riwayat
+        /**
+         * Mengirimkan kuis, menghitung skor, dan menampilkan hasil.
+         */
+        function submitQuiz() {
+            if (Object.keys(userAnswers).length !== currentQuestions.length) {
+                alert('Harap jawab semua pertanyaan sebelum menyelesaikan kuis.');
+                return;
+            }
 
-    studentNameResult.textContent = `Siswa: ${studentName} (Kelas ${studentClass})`;
-    scoreText.textContent = score;
+            let correctAnswers = 0;
+            currentQuestions.forEach((q, index) => {
+                if (userAnswers[index] === q.correct) {
+                    correctAnswers++;
+                }
+            });
 
-    if (score >= 85) {
-        feedbackText.textContent = "Luar Biasa! Pertahankan prestasimu!";
-        feedbackText.className = "text-lg font-medium text-emerald-600";
-        feedbackIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-stars text-yellow-400 animate-sparkle" viewBox="0 0 16 16"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828L7.657 6.247zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.734 1.734 0 0 0 4.593 5.9l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.9A1.734 1.734 0 0 0 2.31 4.807l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.734 1.734 0 0 0 3.407 2.31l.387-1.162zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L10.863.1z"/></svg>`;
-    } else if (score >= 70) {
-        feedbackText.textContent = "Bagus! Terus tingkatkan lagi!";
-        feedbackText.className = "text-lg font-medium text-amber-600";
-        feedbackIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-hand-thumbs-up-fill text-amber-500" viewBox="0 0 16 16"><path d="M6.956 1.745C7.021.81 7.908.087 8.864.325l.261.066c.463.116.874.456 1.012.965.22.816.533 2.511.062 4.51a9.84 9.84 0 0 1 .443-.051c.713-.065 1.669-.072 2.516.21.518.173.994.681 1.2 1.273.184.532.16 1.162-.234 1.733.058.119.103.242.138.363.077.27.113.567.113.856 0 .289-.036.586-.113.856-.039.135-.09.273-.16.404.169.387.107.819-.003 1.148a3.163 3.163 0 0 1-.488.901c.054.152.076.312.076.465 0 .305-.089.625-.253.912C13.1 15.522 12.437 16 11.5 16H8c-.605 0-1.07-.081-1.466-.218a4.82 4.82 0 0 1-.97-.484l-.048-.03c-.504-.307-.999-.609-2.068-.722C2.682 14.464 2 13.846 2 13V9c0-.85.685-1.432 1.357-1.615.849-.232 1.574-.787 2.132-1.41.56-.627.914-1.28 1.039-1.639.199-.575.356-1.539.428-2.59z"/></svg>`;
-    } else {
-        feedbackText.textContent = "Jangan menyerah, ayo coba lagi!";
-        feedbackText.className = "text-lg font-medium text-red-600";
-        feedbackIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-emoji-frown-fill text-red-500" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5zm-2.715 5.933a.5.5 0 0 1-.183-.683A4.498 4.498 0 0 1 8 9.5a4.5 4.5 0 0 1 3.898 2.25.5.5 0 0 1-.866.5A3.498 3.498 0 0 0 8 10.5a3.498 3.498 0 0 0-3.032 1.75.5.5 0 0 1-.683.183zM10 8c-.552 0-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5S10.552 8 10 8z"/></svg>`;
-    }
+            score = Math.round((correctAnswers / currentQuestions.length) * 100);
+            
+            saveResultToFirestore(); 
 
-    showView('results');
-}
+            studentNameResult.textContent = `Siswa: ${studentName} (Kelas ${studentClass})`;
+            scoreText.textContent = score;
 
-/**
- * Menyiapkan dan menampilkan sertifikat dengan QR Code.
- */
-function viewCertificate() {
-    const today = new Date();
-    const dateString = today.toLocaleDateString('id-ID', {
-        day: 'numeric', month: 'long', year: 'numeric'
-    });
+            if (score >= 85) {
+                feedbackText.textContent = "Luar Biasa! Pertahankan prestasimu!";
+                feedbackText.className = "text-lg font-medium text-emerald-600";
+                feedbackIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-stars text-yellow-400 animate-sparkle" viewBox="0 0 16 16"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828L7.657 6.247zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.734 1.734 0 0 0 4.593 5.9l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.9A1.734 1.734 0 0 0 2.31 4.807l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.734 1.734 0 0 0 3.407 2.31l.387-1.162zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L10.863.1z"/></svg>`;
+            } else if (score >= 70) {
+                feedbackText.textContent = "Bagus! Terus tingkatkan lagi!";
+                feedbackText.className = "text-lg font-medium text-amber-600";
+                feedbackIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-hand-thumbs-up-fill text-amber-500" viewBox="0 0 16 16"><path d="M6.956 1.745C7.021.81 7.908.087 8.864.325l.261.066c.463.116.874.456 1.012.965.22.816.533 2.511.062 4.51a9.84 9.84 0 0 1 .443-.051c.713-.065 1.669-.072 2.516.21.518.173.994.681 1.2 1.273.184.532.16 1.162-.234 1.733.058.119.103.242.138.363.077.27.113.567.113.856 0 .289-.036.586-.113.856-.039.135-.09.273-.16.404.169.387.107.819-.003 1.148a3.163 3.163 0 0 1-.488.901c.054.152.076.312.076.465 0 .305-.089.625-.253.912C13.1 15.522 12.437 16 11.5 16H8c-.605 0-1.07-.081-1.466-.218a4.82 4.82 0 0 1-.97-.484l-.048-.03c-.504-.307-.999-.609-2.068-.722C2.682 14.464 2 13.846 2 13V9c0-.85.685-1.432 1.357-1.615.849-.232 1.574-.787 2.132-1.41.56-.627.914-1.28 1.039-1.639.199-.575.356-1.539.428-2.59z"/></svg>`;
+            } else {
+                feedbackText.textContent = "Jangan menyerah, ayo coba lagi!";
+                feedbackText.className = "text-lg font-medium text-red-600";
+                feedbackIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-emoji-frown-fill text-red-500" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5zm-2.715 5.933a.5.5 0 0 1-.183-.683A4.498 4.498 0 0 1 8 9.5a4.5 4.5 0 0 1 3.898 2.25.5.5 0 0 1-.866.5A3.498 3.498 0 0 0 8 10.5a3.498 3.498 0 0 0-3.032 1.75.5.5 0 0 1-.683.183zM10 8c-.552 0-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5S10.552 8 10 8z"/></svg>`;
+            }
 
-    certificateName.textContent = studentName;
-    certificateMaterial.textContent = materiData[selectedMaterialKey].nama;
-    certificateScore.textContent = score;
-    certificateDate.textContent = dateString;
+            showView('results');
+        }
 
-    // Generate QR Code
-    const qrCanvas = document.getElementById('qr-code');
-    const qrData = `Nama: ${studentName}\nKelas: ${studentClass}\nMateri: ${materiData[selectedMaterialKey].nama}\nNilai: ${score}\nTanggal: ${today.toISOString()}`;
-    
-    if (window.QRious) {
-        new QRious({
-            element: qrCanvas,
-            value: qrData,
-            size: 80,
-            background: 'white',
-            foreground: 'black',
-            level: 'H'
+        /**
+         * Menyiapkan dan menampilkan sertifikat.
+         */
+        function viewCertificate() {
+            const today = new Date();
+            const dateString = today.toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'long', year: 'numeric'
+            });
+
+            certificateName.textContent = studentName;
+            certificateMaterial.textContent = materiData[selectedMaterialKey].nama;
+            certificateScore.textContent = score;
+            certificateDate.textContent = dateString;
+
+            const qrCanvas = document.getElementById('qr-code');
+            const qrData = `Nama: ${studentName}\nKelas: ${studentClass}\nMateri: ${materiData[selectedMaterialKey].nama}\nNilai: ${score}\nTanggal: ${today.toISOString()}`;
+            
+            if (window.QRious) {
+                new QRious({
+                    element: qrCanvas,
+                    value: qrData,
+                    size: 80,
+                    background: 'white',
+                    foreground: 'black',
+                    level: 'H'
+                });
+            }
+
+            showView('certificate');
+        }
+
+        /**
+         * Mengunduh hasil kuis individu dalam format Excel.
+         */
+        function downloadResults() {
+            const data = [
+                ["Nama Siswa", "Kelas", "Materi Kuis", "Nilai"],
+                [studentName, studentClass, materiData[selectedMaterialKey].nama, score]
+            ];
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Hasil Kuis");
+            XLSX.writeFile(workbook, `Hasil Kuis - ${studentName}.xlsx`);
+        }
+
+        /**
+         * Mengunduh sertifikat dalam format PDF.
+         */
+        function downloadCertificatePDF() {
+            showToast("Mengunduh sertifikat PDF...");
+            const certificateElement = document.getElementById('certificate-layout');
+            const options = {
+                margin: 0,
+                filename: `Sertifikat PDF - ${studentName}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 3, useCORS: true },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+            html2pdf().from(certificateElement).set(options).save().then(() => {
+                showToast("PDF berhasil diunduh!");
+            }).catch(err => {
+                console.error("Gagal mengunduh PDF:", err);
+                showToast("Gagal mengunduh PDF.");
+            });
+        }
+
+        // --- FUNGSI DATABASE (FIRESTORE) ---
+
+        /**
+         * Menyimpan hasil kuis ke Firestore.
+         */
+        async function saveResultToFirestore() {
+            if (!db) {
+                showToast("Koneksi database gagal, hasil tidak tersimpan.");
+                return;
+            }
+            try {
+                const newEntry = {
+                    name: studentName,
+                    class: studentClass,
+                    material: materiData[selectedMaterialKey].nama,
+                    score: score,
+                    timestamp: serverTimestamp()
+                };
+                await addDoc(resultsCollectionRef, newEntry);
+                showToast("Hasil kuis berhasil disimpan!");
+            } catch (error) {
+                console.error("Gagal menyimpan hasil ke Firestore: ", error);
+                showToast("Gagal menyimpan hasil secara online.");
+            }
+        }
+
+        /**
+         * Mengatur listener real-time untuk rekap hasil.
+         */
+        function setupRealtimeListener() {
+            if (!db) return;
+            resultsCollectionRef = collection(db, resultsCollectionPath);
+            const q = query(resultsCollectionRef);
+
+            onSnapshot(q, (snapshot) => {
+                const results = [];
+                snapshot.forEach(doc => {
+                    results.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Urutkan data berdasarkan timestamp di sisi klien
+                results.sort((a, b) => {
+                    const timeA = a.timestamp?.toDate() || 0;
+                    const timeB = b.timestamp?.toDate() || 0;
+                    return timeB - timeA;
+                });
+
+                displayResultHistory(results);
+            }, (error) => {
+                console.error("Gagal mendapatkan rekap real-time: ", error);
+                document.getElementById('history-loading').textContent = "Gagal memuat rekap.";
+            });
+        }
+
+        /**
+         * Menampilkan rekap hasil di UI.
+         */
+        function displayResultHistory(history) {
+            resultHistoryList.innerHTML = '';
+            const loadingEl = document.getElementById('history-loading');
+            if (loadingEl) loadingEl.style.display = 'none';
+
+            if (history.length === 0) {
+                resultHistoryList.innerHTML = '<li>Belum ada rekap hasil kuis.</li>';
+                return;
+            }
+            history.forEach(entry => {
+                const date = entry.timestamp ? entry.timestamp.toDate().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Baru saja';
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${date}: <strong>${entry.name}</strong> (Kelas ${entry.class}) - Materi "${entry.material}" - <strong>Nilai: ${entry.score}</strong></span>`;
+                resultHistoryList.appendChild(li);
+            });
+        }
+
+        /**
+         * Mengunduh rekap hasil dari Firestore.
+         */
+        async function downloadResultHistory() {
+            if (!db) {
+                alert("Koneksi database gagal.");
+                return;
+            }
+            showToast("Mengunduh rekap...");
+            const querySnapshot = await getDocs(resultsCollectionRef);
+            const history = [];
+            querySnapshot.forEach((doc) => {
+                history.push(doc.data());
+            });
+
+            if (history.length === 0) {
+                alert("Tidak ada rekap untuk diunduh.");
+                return;
+            }
+            
+            // Urutkan data sebelum di-export
+            history.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+
+            const data = history.map(entry => ({
+                "Tanggal & Waktu": entry.timestamp ? entry.timestamp.toDate().toLocaleString('id-ID') : 'N/A',
+                "Nama Siswa": entry.name,
+                "Kelas": entry.class,
+                "Materi": entry.material,
+                "Nilai": entry.score
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Hasil Kuis");
+            XLSX.writeFile(workbook, "Rekap Hasil Kuis Siswa PJOK.xlsx");
+            showToast("Rekap berhasil diunduh!");
+        }
+
+        /**
+         * Mereset (menghapus semua) rekap hasil di Firestore.
+         */
+        async function resetResultHistory() {
+            if (!db) {
+                alert("Koneksi database gagal.");
+                return;
+            }
+            showToast("Menghapus rekap...");
+            try {
+                const querySnapshot = await getDocs(resultsCollectionRef);
+                const batch = writeBatch(db);
+                querySnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                showToast("Seluruh rekap berhasil dihapus!");
+            } catch (error) {
+                console.error("Gagal menghapus rekap: ", error);
+                showToast("Gagal menghapus rekap.");
+            }
+            confirmModal.style.display = 'none';
+        }
+
+        /**
+         * Menampilkan modal konfirmasi untuk reset riwayat.
+         */
+        function confirmReset() {
+            confirmModal.style.display = 'flex';
+        }
+
+
+        // --- EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inisialisasi Firebase Auth dan Listener
+            if (auth) {
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        console.log("Pengguna terautentikasi:", user.uid);
+                        setupRealtimeListener();
+                    } else {
+                        try {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        } catch (error) {
+                            console.error("Gagal sign-in:", error);
+                            document.getElementById('history-loading').textContent = "Gagal autentikasi.";
+                        }
+                    }
+                });
+            }
+
+            // Inisialisasi UI
+            showView('welcome');
+            validateWelcomeForm();
+
+            // Listener untuk form selamat datang
+            studentNameInput.addEventListener('input', validateWelcomeForm);
+            studentClassSelect.addEventListener('change', validateWelcomeForm);
+            materialSelect.addEventListener('change', displayMaterialDescription);
+            startQuizBtn.addEventListener('click', startQuiz);
+
+            // Listener untuk tombol kuis dan hasil
+            submitQuizBtn.addEventListener('click', submitQuiz);
+            retryQuizBtn.addEventListener('click', () => {
+                showView('welcome');
+            });
+            downloadResultsBtn.addEventListener('click', downloadResults);
+            viewCertificateBtn.addEventListener('click', viewCertificate);
+
+            // Listener untuk tombol sertifikat
+            backToResultsBtn.addEventListener('click', () => showView('results'));
+            downloadCertificatePdfBtn.addEventListener('click', downloadCertificatePDF);
+            
+            // Listener untuk riwayat
+            downloadHistoryBtn.addEventListener('click', downloadResultHistory);
+            resetHistoryBtn.addEventListener('click', confirmReset);
+
+            // Listener untuk modal konfirmasi
+            cancelResetBtn.addEventListener('click', () => confirmModal.style.display = 'none');
+            confirmResetBtn.addEventListener('click', resetResultHistory);
         });
-    }
-
-    showView('certificate');
-}
-
-/**
- * Mengunduh hasil kuis individu dalam format Excel.
- */
-function downloadResults() {
-    const data = [
-        ["Nama Siswa", "Kelas", "Materi Kuis", "Nilai"],
-        [studentName, studentClass, materiData[selectedMaterialKey].nama, score]
-    ];
-    const worksheet = XLSX.utils.aoa_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Hasil Kuis");
-    XLSX.writeFile(workbook, `Hasil Kuis - ${studentName}.xlsx`);
-}
-
-/**
- * Mengunduh sertifikat dalam format PDF.
- */
-function downloadCertificatePDF() {
-    showToast("Mengunduh sertifikat PDF...");
-    const certificateElement = document.getElementById('certificate-layout');
-    const options = {
-        margin: 0,
-        filename: `Sertifikat PDF - ${studentName}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 3, useCORS: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
-    };
-    html2pdf().from(certificateElement).set(options).save().then(() => {
-        showToast("PDF berhasil diunduh!");
-    }).catch(err => {
-        console.error("Gagal mengunduh PDF:", err);
-        showToast("Gagal mengunduh PDF.");
-    });
-}
-
-
-// --- FUNGSI RIWAYAT HASIL ---
-
-/**
- * Mendapatkan riwayat hasil dari localStorage.
- * @returns {Array} Array objek riwayat.
- */
-function getResultHistory() {
-    return JSON.parse(localStorage.getItem('pjokResultHistory')) || [];
-}
-
-/**
- * Menyimpan entri riwayat hasil baru.
- */
-function saveResult() {
-    const history = getResultHistory();
-    const newEntry = {
-        name: studentName,
-        class: studentClass,
-        material: materiData[selectedMaterialKey].nama,
-        score: score,
-        timestamp: new Date().toISOString()
-    };
-    history.unshift(newEntry); // Tambahkan ke awal array
-    localStorage.setItem('pjokResultHistory', JSON.stringify(history.slice(0, 100))); // Batasi 100 entri
-    displayResultHistory();
-}
-
-/**
- * Menampilkan riwayat hasil di UI.
- */
-function displayResultHistory() {
-    const history = getResultHistory();
-    resultHistoryList.innerHTML = '';
-    if (history.length === 0) {
-        resultHistoryList.innerHTML = '<li>Belum ada riwayat hasil kuis.</li>';
-        return;
-    }
-    history.forEach(entry => {
-        const date = new Date(entry.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${date}: <strong>${entry.name}</strong> (Kelas ${entry.class}) - Materi "${entry.material}" - <strong>Nilai: ${entry.score}</strong></span>`;
-        resultHistoryList.appendChild(li);
-    });
-}
-
-/**
- * Mengunduh riwayat hasil dalam format Excel.
- */
-function downloadResultHistory() {
-    const history = getResultHistory();
-    if (history.length === 0) {
-        alert("Tidak ada riwayat untuk diunduh.");
-        return;
-    }
-    const data = history.map(entry => ({
-        "Tanggal & Waktu": new Date(entry.timestamp).toLocaleString('id-ID'),
-        "Nama Siswa": entry.name,
-        "Kelas": entry.class,
-        "Materi": entry.material,
-        "Nilai": entry.score
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Riwayat Hasil Kuis");
-    XLSX.writeFile(workbook, "Riwayat Hasil Kuis Siswa PJOK.xlsx");
-}
-
-/**
- * Menampilkan modal konfirmasi untuk reset riwayat.
- */
-function confirmReset() {
-    confirmModal.style.display = 'flex';
-}
-
-/**
- * Mereset riwayat hasil setelah konfirmasi.
- */
-function resetResultHistory() {
-    localStorage.removeItem('pjokResultHistory');
-    displayResultHistory();
-    confirmModal.style.display = 'none';
-}
-
-
-// --- EVENT LISTENERS ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Inisialisasi tampilan awal
-    showView('welcome');
-    displayResultHistory();
-    validateWelcomeForm();
-
-    // Listener untuk form selamat datang
-    studentNameInput.addEventListener('input', validateWelcomeForm);
-    studentClassSelect.addEventListener('change', validateWelcomeForm);
-    materialSelect.addEventListener('change', displayMaterialDescription);
-    startQuizBtn.addEventListener('click', startQuiz);
-
-    // Listener untuk tombol kuis dan hasil
-    submitQuizBtn.addEventListener('click', submitQuiz);
-    retryQuizBtn.addEventListener('click', () => {
-        // Reset state dan kembali ke awal
-        studentNameInput.value = '';
-        studentClassSelect.value = '';
-        materialSelect.value = '';
-        materialDescription.style.display = 'none';
-        validateWelcomeForm();
-        showView('welcome');
-    });
-    downloadResultsBtn.addEventListener('click', downloadResults);
-    viewCertificateBtn.addEventListener('click', viewCertificate);
-
-    // Listener untuk tombol sertifikat
-    backToResultsBtn.addEventListener('click', () => showView('results'));
-    downloadCertificatePdfBtn.addEventListener('click', downloadCertificatePDF);
-    
-    // Listener untuk riwayat
-    downloadHistoryBtn.addEventListener('click', downloadResultHistory);
-    resetHistoryBtn.addEventListener('click', confirmReset);
-
-    // Listener untuk modal konfirmasi
-    cancelResetBtn.addEventListener('click', () => confirmModal.style.display = 'none');
-    confirmResetBtn.addEventListener('click', resetResultHistory);
-    
-});
-
-</script>
+    </script>
 </body>
 </html>
